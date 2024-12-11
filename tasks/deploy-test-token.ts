@@ -1,4 +1,3 @@
-import { LendingPoolConfigurator } from "../types";
 import { task } from "hardhat/config";
 import type { TaskArguments } from "hardhat/types";
 import chalk from "chalk";

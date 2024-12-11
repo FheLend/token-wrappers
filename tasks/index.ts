@@ -1,1 +1,1 @@
-export * from "/deploy-test-token";
+export * from "./deploy-test-token";

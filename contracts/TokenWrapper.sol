@@ -8,8 +8,8 @@ import "@fhenixprotocol/contracts/FHE.sol";
 contract TestToken is ERC20, Permissioned {
 
     mapping(address => euint64) internal _encBalances;
-    mapping(address => bool) internal _minted; // limit each address to mint only one
     euint64 public totalEncryptedSupply;
+    mapping(address => bool) internal _minted;
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
     }
@@ -21,8 +21,6 @@ contract TestToken is ERC20, Permissioned {
 
     // @dev mint token for testing purpose
     function mint(inEuint64 memory eMintAmount) public {
-        // check require
-        require(_minted[msg.sender] == false, "Each address can mint only once.");
         _mintEncrypted(msg.sender, eMintAmount);
         _minted[msg.sender] = true;
     }
@@ -34,7 +32,7 @@ contract TestToken is ERC20, Permissioned {
     }
 
 
-    function wrap(uint32 amount) public {
+    function wrap(uint64 amount) public {
         // Make sure that the sender has enough of the public balance
         require(balanceOf(msg.sender) >= amount);
         // Burn public balance

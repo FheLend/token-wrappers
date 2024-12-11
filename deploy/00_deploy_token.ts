@@ -1,52 +1,34 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import chalk from "chalk";
+import { skip } from "node:test";
 
-/**
- * Deploys a contract named "Counter" using the deployer account and
- * constructor arguments set to the deployer address
- *
- * @param hre HardhatRuntimeEnvironment object.
- */
-const deployCounter: DeployFunction = async function (
-  hre: HardhatRuntimeEnvironment,
-) {
-  /*
-    On localhost, the deployer account is the one that comes with Hardhat, which is already funded.
+const hre = require("hardhat");
 
-    When deploying to live networks (e.g `yarn deploy --network goerli`), the deployer account
-    should have sufficient balance to pay for the gas fees for contract creation.
+const func: DeployFunction = async function () {
+  const { fhenixjs, ethers } = hre;
+  const { deploy, execute } = hre.deployments;
+  const [signer] = await ethers.getSigners();
 
-    You can generate a random account with `yarn generate` which will fill DEPLOYER_PRIVATE_KEY
-    with a random private key in the .env file (then used on hardhat.config.ts)
-    You can run the `yarn account` command to check your balance in every network.
-  */
-  const { deployer } = await hre.getNamedAccounts();
-  const { deploy } = hre.deployments;
-
-  if (hre.network.name === "hardhat" && process.argv.includes("deploy")) {
-    console.warn("Warning: you are deploying to the in-process Hardhat network, but this network gets destroyed right after the deployment task ends.");
-  }
-  // Fund the account before deploying.
-  if (hre.network.name === "localfhenix") {
-    if ((await hre.ethers.provider.getBalance(deployer)) === 0n) {
-      await hre.fhenixjs.getFunds(deployer);
-      console.log("Received tokens from the local faucet. Ready to deploy...");
+  if ((await ethers.provider.getBalance(signer.address)).toString() === "0") {
+    if (hre.network.name === "localfhenix") {
+      await fhenixjs.getFunds(signer.address);
+    } else {
+        console.log(
+            chalk.red("Please fund your account with testnet FHE from https://faucet.fhenix.zone"));
+        return;
     }
   }
 
-  await deploy("", {
-    from: deployer,
-    // Contract constructor arguments
-    args: [],
+  const AddressesProvider = await deploy("TestToken", {
+    from: signer.address,
     log: true,
-    // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
-    // automatically mining the contract deployment transaction. There is no effect on live networks.
-    autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
+
+  console.log(`Test Token contract: `, AddressesProvider.address);
 };
 
-export default deployCounter;
-
-// Tags are useful if you have multiple deploy files and only want to run one of them.
-// e.g. yarn deploy --tags Counter
-deployCounter.tags = ["test-token"];
+export default func;
+func.id = "deploy_test_token";
+func.tags = ["test_token"];

@@ -1,71 +1,84 @@
-import * as dotenv from "dotenv";
-dotenv.config();
-import { HardhatUserConfig } from "hardhat/config";
-import "@typechain/hardhat";
-import "@nomicfoundation/hardhat-ethers";
-import "@nomicfoundation/hardhat-chai-matchers";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
-import "@nomicfoundation/hardhat-verify";
-import "hardhat-deploy";
-import "hardhat-deploy-ethers";
+// Plugins
+// Tasks
+import "./tasks";
+import "@nomicfoundation/hardhat-toolbox";
+import {config as dotenvConfig} from "dotenv";
 import "fhenix-hardhat-docker";
 import "fhenix-hardhat-plugin";
-import "fhenix-hardhat-network";
+import "hardhat-deploy";
+import {HardhatUserConfig} from "hardhat/config";
+import {resolve} from "path";
 import "@nomicfoundation/hardhat-foundry";
+import "@nomicfoundation/hardhat-verify";
 
-import "./tasks";
+// DOTENV_CONFIG_PATH is used to specify the path to the .env file for example in the CI
+const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "./.env";
+dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
-// If not set, it uses the hardhat account 0 private key.
-const deployerPrivateKey =
-  process.env.DEPLOYER_PRIVATE_KEY ??
-  "";
-// If not set, it uses ours Etherscan default API key.
-const etherscanApiKey =
-  process.env.ETHERSCAN_API_KEY || "";
+const TESTNET_CHAIN_ID = 8008135;
+const TESTNET_RPC_URL = "https://api.helium.fhenix.zone";
 
-const config= {
+const testnetConfig = {
+    chainId: TESTNET_CHAIN_ID,
+    url: TESTNET_RPC_URL,
+}
+
+
+// Select either private keys or mnemonic from .env file or environment variables
+const keys = process.env.KEY;
+if (!keys) {
+  let mnemonic = process.env.MNEMONIC;
+  if (!mnemonic) {
+    throw new Error("No mnemonic or private key provided, please set MNEMONIC or KEY in your .env file");
+  }
+  testnetConfig['accounts'] = {
+    count: 10,
+    mnemonic,
+    path: "m/44'/60'/0'/0",
+  }
+} else {
+  testnetConfig['accounts'] = [keys];
+}
+
+
+const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,
-        // https://docs.soliditylang.org/en/latest/using-the-compiler.html#optimizer-options
-        runs: 200,
+        runs: 2000,
       },
       viaIR: true,
     },
   },
+  
+  // Optional: defaultNetwork is already being set to "localfhenix" by fhenix-hardhat-plugin
   defaultNetwork: "localfhenix",
-  namedAccounts: {
-    deployer: {
-      // By default, it will take the first Hardhat account as the deployer
-      default: 0,
-    },
-  },
   networks: {
-    // View the networks that are pre-configured.
-    // If the network you are looking for is not here you can add new network settings
-    helium: {
-      url: "https://api.helium.fhenix.zone",
-      chainId: 8008135,
-    },
-    localhost: {
-      chainId: 31337,
-    }
+    testnet: testnetConfig,
   },
-  // configuration for harhdat-verify plugin
   etherscan: {
-    apiKey: `${etherscanApiKey}`,
-  },
-  // configuration for etherscan-verify from hardhat-deploy plugin
-  verify: {
-    etherscan: {
-      apiKey: `${etherscanApiKey}`,
+    apiKey: {
+      "testnet": "abc",
     },
+    customChains: [
+      {
+        network: "testnet",
+        chainId: TESTNET_CHAIN_ID,
+        urls: {
+          apiURL: "https://explorer.helium.fhenix.zone/api",
+          browserURL: "https://explorer.helium.fhenix.zone/",
+        }
+      }
+    ]
   },
   sourcify: {
-    enabled: false,
+    enabled: false
+  },
+  typechain: {
+    outDir: "types",
+    target: "ethers-v6",
   },
 };
 
